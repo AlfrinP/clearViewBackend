@@ -1,7 +1,8 @@
 from langchain.tools import tool
 from langchain.agents import create_agent
-from rag.model.llmModel import model
+from models import llm
 from rag.vectorDb import vector_store
+
 
 @tool(response_format="content_and_artifact")
 def retrieve_context(query: str):
@@ -14,7 +15,6 @@ def retrieve_context(query: str):
     return serialized, retrieved_docs
 
 
-
 tools = [retrieve_context]
 # If desired, specify custom instructions
 prompt = (
@@ -24,7 +24,7 @@ prompt = (
     "and explain why using retrieved evidence."
 )
 
-agent = create_agent(model, tools, system_prompt=prompt)
+agent = create_agent(llm, tools, system_prompt=prompt)
 
 
 # query = (
