@@ -10,3 +10,7 @@ MONGODB_COLLECTION = os.getenv("MONGODB_COLLECTION")
 ATLAS_VECTOR_SEARCH_INDEX_NAME = os.getenv("ATLAS_VECTOR_SEARCH_INDEX_NAME")
 MONGODB_CONNECTION_STRING = os.getenv("MONGODB_CONNECTION_STRING")
 DB_NAME = os.getenv("DB_NAME")
+
+# Verified source APIs (optional keys where required)
+NEWSAPI_KEY = os.getenv("NEWSAPI_KEY")
+DATA_GOV_IN_API_KEY = os.getenv("DATA_GOV_IN_API_KEY")  # if required by data.gov.in
