@@ -1,11 +1,15 @@
 """FastAPI application entry point."""
-from fastapi import FastAPI, Request
+from typing import Annotated
 
-from app.api.routes import verification, ingest, health
+from fastapi import Depends, FastAPI, Request
+
+from app.api.routes import auth, health, ingest, verification
+from app.auth.jwt import User, get_current_active_user
 from app.rule_engine.decision_engine import decision_engine
 
 app = FastAPI(title="Fake News Verification API", version="1.0.0")
 
+app.include_router(auth.router)
 app.include_router(verification.router)
 app.include_router(ingest.router)
 app.include_router(health.router)
@@ -17,7 +21,10 @@ async def root():
 
 
 @app.post("/verify-news")
-async def verify_news_legacy(request: Request):
+async def verify_news_legacy(
+    request: Request,
+    current_user: Annotated[User, Depends(get_current_active_user)],
+):
     """Legacy endpoint: accepts {"news": "..."} and returns VerificationResponse."""
     data = await request.json()
     news = data.get("news") or data.get("claim", "")

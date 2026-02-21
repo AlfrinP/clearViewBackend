@@ -1,6 +1,9 @@
 """Ingestion API routes."""
-from fastapi import APIRouter, HTTPException, UploadFile, File
+from typing import Annotated
 
+from fastapi import APIRouter, File, HTTPException, UploadFile, Depends
+
+from app.auth.jwt import User, get_current_active_user
 from app.core.schemas import IngestRequest, IngestResponse
 from app.pipeline.ingest import run_ingestion
 
@@ -10,7 +13,10 @@ _ingest_status: dict = {"last_run": None, "documents_ingested": 0, "message": ""
 
 
 @router.post("/ingest", response_model=IngestResponse)
-async def ingest_documents(req: IngestRequest) -> IngestResponse:
+async def ingest_documents(
+    req: IngestRequest,
+    current_user: Annotated[User, Depends(get_current_active_user)],
+) -> IngestResponse:
     """
     Ingest policy documents. Provide file_path in JSON body.
     Example: {"file_path": "documents/demo.pdf"}
@@ -32,7 +38,10 @@ async def ingest_documents(req: IngestRequest) -> IngestResponse:
 
 
 @router.post("/ingest/upload", response_model=IngestResponse)
-async def ingest_upload(file: UploadFile = File(...)) -> IngestResponse:
+async def ingest_upload(
+    file: UploadFile = File(...),
+    _: Annotated[User, Depends(get_current_active_user)] = None,
+) -> IngestResponse:
     """Upload and ingest a PDF file."""
     if not file.filename or not file.filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="PDF file required")
@@ -55,6 +64,8 @@ async def ingest_upload(file: UploadFile = File(...)) -> IngestResponse:
 
 
 @router.get("/ingest/status")
-async def ingest_status() -> dict:
+async def ingest_status(
+    current_user: Annotated[User, Depends(get_current_active_user)],
+) -> dict:
     """Get last ingestion job status."""
     return _ingest_status
