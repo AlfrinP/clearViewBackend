@@ -1,0 +1,15 @@
+meta {
+  name: newsApi
+  type: http
+  seq: 2
+}
+
+get {
+  url: https://newsapi.org/v2/everything
+  body: none
+  auth: inherit
+}
+
+settings {
+  encodeUrl: true
+}
