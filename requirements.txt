@@ -113,3 +113,4 @@ crewai-tools
 langchain-groq
 duckduckgo-search
 pandas
+tavily-python

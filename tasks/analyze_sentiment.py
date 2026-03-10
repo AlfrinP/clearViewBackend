@@ -6,14 +6,20 @@ def create_web_search_task(agent, news_text: str, verification_task: Task) -> Ta
         agent=agent,
         context=[verification_task],
         description=(
-            "Only if rag_sufficient is false, perform web search to gather external evidence.\n"
-            "Prioritize trusted sources (WHO, CDC, Reuters, AP, government or academic domains).\n\n"
-            f"News article:\n{news_text}"
+            "When rag_sufficient is false, use Tavily web search to gather "
+            "external evidence.\n"
+            "Use extracted claims or keywords from prior tasks to form "
+            "precise search queries.\n"
+            "Prioritize trusted sources (WHO, CDC, Reuters, AP, government "
+            "or academic domains).\n\n"
+            f"News article:\n{news_text}\n\n"
+            "Use the tavily_web_search_tool and return only structured JSON."
         ),
         expected_output=(
             "Strict JSON object with keys:\n"
-            "- web_sources: array of {title, url, snippet, credibility_note}\n"
-            "- web_search_summary: short text\n"
-            "- skipped: boolean (true if rag_sufficient was true)"
+            "- web_sources: array of {title, content, url}\n"
+            "- evidence_summaries: array of short summaries showing support "
+            "or contradiction\n"
+            "- skipped: boolean"
         ),
     )

@@ -1,14 +1,17 @@
 from crewai import Agent
 
 from models import crew_llm
-from tools.web_scraping_tool import web_scraping_tool
+from tools.web_search import tavily_web_search_tool
 
 web_search_agent = Agent(
-    role="Web Search Verification Specialist",
-    goal="Collect high-quality external sources to validate claims when internal evidence is weak.",
-    backstory="An OSINT researcher focused on trusted and recent corroborating references.",
+    role="Web Research Specialist",
+    goal=(
+        "Search the internet for reliable information related "
+        "to news claims."
+    ),
+    backstory="An investigative journalist skilled at finding trustworthy sources.",
     llm=crew_llm,
-    tools=[web_scraping_tool],
+    tools=[tavily_web_search_tool],
     allow_delegation=False,
     verbose=False,
 )

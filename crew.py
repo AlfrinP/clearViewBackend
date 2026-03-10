@@ -5,19 +5,6 @@ from typing import Any
 from config import MOCK_PIPELINE, RAG_SIMILARITY_THRESHOLD
 from env import GROQ_API_KEY
 
-from crewai import Crew, Process
-
-from agents.decision_agent import decision_agent
-from agents.evaluation_agent import evaluation_agent
-from agents.input_agent import input_agent
-from agents.rag_agent import rag_agent
-from agents.web_search_agent import web_search_agent
-from tasks.analyze_sentiment import create_web_search_task
-from tasks.extract_information import create_extract_information_task
-from tasks.produce_final_result import create_produce_final_result_task
-from tasks.retrieve_evidence import create_retrieve_evidence_task
-from tasks.verify_facts import create_verify_facts_task
-
 
 def _task_output_to_text(task_output: Any) -> str:
     if task_output is None:
@@ -47,6 +34,39 @@ def _safe_json(text: str) -> dict:
         return {}
 
 
+def _normalize_web_sources(raw_sources: Any) -> list[dict]:
+    if not isinstance(raw_sources, list):
+        return []
+
+    normalized: list[dict] = []
+    for source in raw_sources:
+        if not isinstance(source, dict):
+            continue
+        normalized.append(
+            {
+                "title": str(source.get("title", "")).strip(),
+                "content": str(
+                    source.get(
+                        "content",
+                        source.get("snippet", source.get("summary", "")),
+                    )
+                ).strip(),
+                "url": str(source.get("url", "")).strip(),
+            }
+        )
+    return normalized
+
+
+def _default_decision_payload(reasoning: str) -> dict:
+    return {
+        "classification": "Uncertain",
+        "confidence": 0.0,
+        "reasoning": reasoning,
+        "rag_evidence": [],
+        "web_sources": [],
+    }
+
+
 def _mock_result(news_text: str) -> dict:
     fake_markers = [
         "cures covid",
@@ -72,8 +92,10 @@ def _mock_result(news_text: str) -> dict:
             {
                 "title": "Mock Source",
                 "url": "https://example.com/mock-source",
-                "snippet": "Mock web evidence used because RAG similarity was insufficient.",
-                "credibility_note": "Placeholder source for local smoke testing.",
+                "content": (
+                    "Mock web evidence used because RAG similarity was "
+                    "insufficient."
+                ),
             }
         ]
     )
@@ -105,10 +127,29 @@ def run_fake_news_pipeline(news_text: str) -> dict:
         return _mock_result(news_text)
 
     if not GROQ_API_KEY:
-        raise RuntimeError("GROQ_API_KEY is required unless MOCK_PIPELINE=true.")
+        raise RuntimeError(
+            "GROQ_API_KEY is required unless MOCK_PIPELINE=true."
+        )
+
+    from crewai import Crew, Process
+
+    from agents.decision_agent import decision_agent
+    from agents.evaluation_agent import evaluation_agent
+    from agents.input_agent import input_agent
+    from agents.rag_agent import rag_agent
+    from agents.web_search_agent import web_search_agent
+    from tasks.analyze_sentiment import create_web_search_task
+    from tasks.extract_information import create_extract_information_task
+    from tasks.produce_final_result import create_produce_final_result_task
+    from tasks.retrieve_evidence import create_retrieve_evidence_task
+    from tasks.verify_facts import create_verify_facts_task
 
     extract_task = create_extract_information_task(input_agent, news_text)
-    retrieve_task = create_retrieve_evidence_task(rag_agent, news_text, extract_task)
+    retrieve_task = create_retrieve_evidence_task(
+        rag_agent,
+        news_text,
+        extract_task,
+    )
     verify_task = create_verify_facts_task(evaluation_agent, retrieve_task)
 
     initial_crew = Crew(
@@ -120,9 +161,6 @@ def run_fake_news_pipeline(news_text: str) -> dict:
     initial_result = initial_crew.kickoff()
 
     initial_outputs = getattr(initial_result, "tasks_output", [])
-    extract_json = _safe_json(
-        _task_output_to_text(initial_outputs[0] if len(initial_outputs) > 0 else None)
-    )
     retrieve_json = _safe_json(
         _task_output_to_text(initial_outputs[1] if len(initial_outputs) > 1 else None)
     )
@@ -151,8 +189,14 @@ def run_fake_news_pipeline(news_text: str) -> dict:
         decision_result = decision_crew.kickoff()
         final_output = getattr(decision_result, "tasks_output", [])
         decision_json = _safe_json(
-            _task_output_to_text(final_output[0] if final_output else decision_result)
+            _task_output_to_text(
+                final_output[0] if final_output else decision_result
+            )
         )
+        if not decision_json:
+            decision_json = _default_decision_payload(
+                "Final decision agent returned unparsable output."
+            )
         decision_json.setdefault("rag_evidence", retrieve_json.get("rag_evidence", []))
         decision_json.setdefault("web_sources", [])
         return decision_json
@@ -170,13 +214,21 @@ def run_fake_news_pipeline(news_text: str) -> dict:
     fallback_result = fallback_crew.kickoff()
     fallback_outputs = getattr(fallback_result, "tasks_output", [])
     web_json = _safe_json(
-        _task_output_to_text(fallback_outputs[0] if len(fallback_outputs) > 0 else None)
+        _task_output_to_text(
+            fallback_outputs[0] if len(fallback_outputs) > 0 else None
+        )
     )
     decision_json = _safe_json(
         _task_output_to_text(
             fallback_outputs[1] if len(fallback_outputs) > 1 else fallback_result
         )
     )
+    if not decision_json:
+        decision_json = _default_decision_payload(
+            "Final decision agent returned unparsable output after web "
+            "search."
+        )
     decision_json.setdefault("rag_evidence", retrieve_json.get("rag_evidence", []))
-    decision_json.setdefault("web_sources", web_json.get("web_sources", []))
+    web_sources = _normalize_web_sources(web_json.get("web_sources", []))
+    decision_json.setdefault("web_sources", web_sources)
     return decision_json

@@ -7,6 +7,10 @@ def create_produce_final_result_task(agent, task_context: list[Task]) -> Task:
         context=task_context,
         description=(
             "Produce the final fake-news verdict using available evidence.\n"
+            "Combine internal RAG evidence, Tavily web sources (if present), "
+            "and sentiment or tone signals (if present in context).\n"
+            "Prefer evidence quality over quantity and cite strongest "
+            "supporting or contradicting sources.\n"
             "Classifications allowed: Real, Fake, Uncertain.\n"
             "Confidence must be between 0 and 1 and reflect evidence quality."
         ),
