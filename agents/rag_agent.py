@@ -1,16 +1,14 @@
-from crewai import Agent, Task
+from crewai import Agent
+
+from models import crew_llm
 from tools.rag_tool import rag_tool
 
-agent = Agent(
-    role="RAG Agent",
-    goal="Answer using MongoDB vector search",
-    backstory="Knowledge retrieval specialist",
+rag_agent = Agent(
+    role="RAG Retrieval Specialist",
+    goal="Retrieve the most relevant evidence from the internal vector knowledge base for each extracted claim.",
+    backstory="A retrieval engineer who prioritizes precision, provenance, and semantic similarity signals.",
+    llm=crew_llm,
     tools=[rag_tool],
-    verbose=True,
-)
-
-task = Task(
-    description="Find relevant content for 'indexing guidance'",
-    expected_output="A concise answer citing the most relevant matches",
-    agent=agent,
+    allow_delegation=False,
+    verbose=False,
 )
