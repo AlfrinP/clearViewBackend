@@ -3,23 +3,8 @@ import logging
 from typing import TypedDict
 
 from env import TAVILY_API_KEY
-
-try:
-    from tavily import TavilyClient
-except Exception:  # pylint: disable=broad-exception-caught
-    # pragma: no cover - runtime dependency may be absent in tests
-    TavilyClient = None  # type: ignore[assignment]
-
-try:
-    from crewai.tools import tool
-except Exception:  # pylint: disable=broad-exception-caught
-    # pragma: no cover - enables import in mock/local environments
-    def tool(_name: str):  # type: ignore[override]
-        def decorator(func):
-            return func
-
-        return decorator
-
+from tavily import TavilyClient
+from crewai.tools import tool
 
 logger = logging.getLogger(__name__)
 
@@ -32,9 +17,7 @@ class WebSearchResult(TypedDict):
 
 def _get_tavily_client() -> TavilyClient | None:
     if not TAVILY_API_KEY:
-        logger.warning(
-            "TAVILY_API_KEY is not set; web search will return no results."
-        )
+        logger.warning("TAVILY_API_KEY is not set; web search will return no results.")
         return None
     if TavilyClient is None:
         logger.exception("tavily-python is not installed; web search unavailable.")
@@ -63,9 +46,7 @@ def tavily_web_search(query: str, max_results: int = 5) -> list[WebSearchResult]
         logger.exception("Tavily search failed for query=%s error=%s", query, exc)
         return []
 
-    raw_results = (
-        response.get("results", []) if isinstance(response, dict) else []
-    )
+    raw_results = response.get("results", []) if isinstance(response, dict) else []
     cleaned: list[WebSearchResult] = []
     for item in raw_results[:max_results]:
         if not isinstance(item, dict):

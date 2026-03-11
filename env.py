@@ -1,7 +1,10 @@
 from dotenv import load_dotenv
 import os
 
-load_dotenv()
+# Load base env first
+load_dotenv(".env")
+# Then overlay local developer overrides (if present)
+load_dotenv(".env.local", override=True)
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 SERPER_API_KEY = os.getenv("SERPER_API_KEY")
