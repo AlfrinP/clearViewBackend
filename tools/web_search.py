@@ -7,6 +7,8 @@ from tavily import TavilyClient
 from crewai.tools import tool
 
 logger = logging.getLogger(__name__)
+MAX_SOURCE_COUNT = 3
+MAX_CONTENT_CHARS = 400
 
 
 class WebSearchResult(TypedDict):
@@ -25,7 +27,7 @@ def _get_tavily_client() -> TavilyClient | None:
     return TavilyClient(api_key=TAVILY_API_KEY)
 
 
-def tavily_web_search(query: str, max_results: int = 5) -> list[WebSearchResult]:
+def tavily_web_search(query: str, max_results: int = MAX_SOURCE_COUNT) -> list[WebSearchResult]:
     client = _get_tavily_client()
     if client is None:
         return []
@@ -51,10 +53,11 @@ def tavily_web_search(query: str, max_results: int = 5) -> list[WebSearchResult]
     for item in raw_results[:max_results]:
         if not isinstance(item, dict):
             continue
+        content = str(item.get("content", "")).strip()
         cleaned.append(
             {
                 "title": str(item.get("title", "")).strip(),
-                "content": str(item.get("content", "")).strip(),
+                "content": content[:MAX_CONTENT_CHARS],
                 "url": str(item.get("url", "")).strip(),
             }
         )
@@ -71,5 +74,5 @@ def tavily_web_search_tool(query: str) -> str:
     Args:
         query: Claim or keywords that need external verification.
     """
-    results = tavily_web_search(query=query, max_results=5)
+    results = tavily_web_search(query=query, max_results=MAX_SOURCE_COUNT)
     return json.dumps(results)

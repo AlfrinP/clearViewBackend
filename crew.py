@@ -1,4 +1,5 @@
 import json
+import logging
 import re
 from typing import Any
 
@@ -16,6 +17,8 @@ from tasks.extract_information import create_extract_information_task
 from tasks.produce_final_result import create_produce_final_result_task
 from tasks.retrieve_evidence import create_retrieve_evidence_task
 from tasks.verify_facts import create_verify_facts_task
+
+logger = logging.getLogger(__name__)
 
 
 def _task_output_to_text(task_output: Any) -> str:
@@ -79,6 +82,16 @@ def _default_decision_payload(reasoning: str) -> dict:
     }
 
 
+def _partial_decision_payload(reasoning: str, web_sources: list[dict]) -> dict:
+    return {
+        "classification": "Uncertain",
+        "confidence": 0.2 if web_sources else 0.0,
+        "reasoning": reasoning,
+        "rag_evidence": [],
+        "web_sources": web_sources,
+    }
+
+
 def _mock_result(news_text: str) -> dict:
     fake_markers = [
         "cures covid",
@@ -134,12 +147,15 @@ def _mock_result(news_text: str) -> dict:
 
 
 def run_fake_news_pipeline(news_text: str) -> dict:
+    logger.info("Starting fake-news pipeline.")
     if MOCK_PIPELINE:
+        logger.info("MOCK_PIPELINE enabled. Returning mock result.")
         return _mock_result(news_text)
 
     if not GROQ_API_KEY:
         raise RuntimeError("GROQ_API_KEY is required unless MOCK_PIPELINE=true.")
 
+    logger.info("Creating initial tasks: extract -> retrieve -> verify")
     extract_task = create_extract_information_task(input_agent, news_text)
     retrieve_task = create_retrieve_evidence_task(
         rag_agent,
@@ -148,6 +164,10 @@ def run_fake_news_pipeline(news_text: str) -> dict:
     )
     verify_task = create_verify_facts_task(evaluation_agent, retrieve_task)
 
+    logger.info(
+        "Launching initial crew with agents: %s",
+        [input_agent.role, rag_agent.role, evaluation_agent.role],
+    )
     initial_crew = Crew(
         agents=[input_agent, rag_agent, evaluation_agent],
         tasks=[extract_task, retrieve_task, verify_task],
@@ -155,6 +175,7 @@ def run_fake_news_pipeline(news_text: str) -> dict:
         verbose=False,
     )
     initial_result = initial_crew.kickoff()
+    logger.info("Initial crew completed.")
 
     initial_outputs = getattr(initial_result, "tasks_output", [])
     retrieve_json = _safe_json(
@@ -173,8 +194,15 @@ def run_fake_news_pipeline(news_text: str) -> dict:
     rag_sufficient = verify_json.get("rag_sufficient")
     if rag_sufficient is None:
         rag_sufficient = similarity_score >= RAG_SIMILARITY_THRESHOLD
+    logger.info(
+        "Evidence routing decision: rag_sufficient=%s similarity_score=%.3f threshold=%.3f",
+        rag_sufficient,
+        similarity_score,
+        RAG_SIMILARITY_THRESHOLD,
+    )
 
     if rag_sufficient:
+        logger.info("Skipping web search. Running decision agent with RAG evidence only.")
         decision_task = create_produce_final_result_task(decision_agent, [verify_task])
         decision_crew = Crew(
             agents=[decision_agent],
@@ -183,11 +211,16 @@ def run_fake_news_pipeline(news_text: str) -> dict:
             verbose=False,
         )
         decision_result = decision_crew.kickoff()
+        logger.info("Decision-only crew completed.")
         final_output = getattr(decision_result, "tasks_output", [])
+        logger.debug("Decision output raw=%r", final_output)
         decision_json = _safe_json(
             _task_output_to_text(final_output[0] if final_output else decision_result)
         )
         if not decision_json:
+            logger.warning(
+                "Decision agent output was unparsable. Returning default decision payload."
+            )
             decision_json = _default_decision_payload(
                 "Final decision agent returned unparsable output."
             )
@@ -195,9 +228,14 @@ def run_fake_news_pipeline(news_text: str) -> dict:
         decision_json.setdefault("web_sources", [])
         return decision_json
 
+    logger.info("RAG evidence insufficient. Running web search fallback path.")
     web_task = create_web_search_task(web_search_agent, news_text, verify_task)
     decision_task = create_produce_final_result_task(
         decision_agent, [verify_task, web_task]
+    )
+    logger.info(
+        "Launching fallback crew with agents: %s",
+        [web_search_agent.role, decision_agent.role],
     )
     fallback_crew = Crew(
         agents=[web_search_agent, decision_agent],
@@ -206,6 +244,7 @@ def run_fake_news_pipeline(news_text: str) -> dict:
         verbose=False,
     )
     fallback_result = fallback_crew.kickoff()
+    logger.info("Fallback crew completed.")
     fallback_outputs = getattr(fallback_result, "tasks_output", [])
     web_json = _safe_json(
         _task_output_to_text(fallback_outputs[0] if len(fallback_outputs) > 0 else None)
@@ -216,10 +255,30 @@ def run_fake_news_pipeline(news_text: str) -> dict:
         )
     )
     if not decision_json:
-        decision_json = _default_decision_payload(
-            "Final decision agent returned unparsable output after web " "search."
+        logger.warning(
+            "Decision output after web search was unparsable. Using default payload."
+        )
+        raw_web_output = _task_output_to_text(
+            fallback_outputs[0] if len(fallback_outputs) > 0 else None
+        )
+        raw_decision_output = _task_output_to_text(
+            fallback_outputs[1] if len(fallback_outputs) > 1 else fallback_result
+        )
+        logger.error(
+            "Unparsable fallback outputs. raw_web_output=%r raw_decision_output=%r",
+            raw_web_output[:2000],
+            raw_decision_output[:2000],
+        )
+        fallback_web_sources = _normalize_web_sources(web_json.get("web_sources", []))
+        decision_json = _partial_decision_payload(
+            (
+                "Final decision agent returned unparsable output after web "
+                "search. Returning partial result with retrieved web sources."
+            ),
+            fallback_web_sources,
         )
     decision_json.setdefault("rag_evidence", retrieve_json.get("rag_evidence", []))
     web_sources = _normalize_web_sources(web_json.get("web_sources", []))
     decision_json.setdefault("web_sources", web_sources)
+    logger.info("Pipeline finished. web_sources_count=%d", len(web_sources))
     return decision_json

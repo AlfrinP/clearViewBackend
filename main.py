@@ -1,10 +1,15 @@
 import argparse
 import json
+import logging
 
 from crew import run_fake_news_pipeline
 
 
 def main() -> None:
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+    )
     parser = argparse.ArgumentParser(description="CrewAI fake news detection")
     parser.add_argument(
         "--news",

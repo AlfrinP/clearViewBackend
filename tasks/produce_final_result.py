@@ -11,6 +11,9 @@ def create_produce_final_result_task(agent, task_context: list[Task]) -> Task:
             "and sentiment or tone signals (if present in context).\n"
             "Prefer evidence quality over quantity and cite strongest "
             "supporting or contradicting sources.\n"
+            "Keep the response compact and valid JSON only.\n"
+            "Limit web_sources to 3 items and cap each content field to "
+            "400 characters.\n"
             "Classifications allowed: Real, Fake, Uncertain.\n"
             "Confidence must be between 0 and 1 and reflect evidence quality."
         ),
