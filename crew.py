@@ -2,8 +2,7 @@ import json
 import re
 from typing import Any
 
-from config import MOCK_PIPELINE, RAG_SIMILARITY_THRESHOLD
-from env import GROQ_API_KEY
+from env import GROQ_API_KEY, MOCK_PIPELINE, RAG_SIMILARITY_THRESHOLD
 
 from crewai import Crew, Process
 

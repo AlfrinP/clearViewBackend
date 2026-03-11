@@ -1,9 +1,7 @@
-from langchain_groq import ChatGroq
 from langchain_huggingface import HuggingFaceEmbeddings
 from crewai import LLM
 
-from config import GROQ_MAX_TOKENS, GROQ_MODEL, GROQ_TEMPERATURE
-from env import GROQ_API_KEY
+from env import GROQ_API_KEY, GROQ_MAX_TOKENS, GROQ_MODEL, GROQ_TEMPERATURE
 
 # llm = ChatGroq(
 #     model=GROQ_MODEL,
