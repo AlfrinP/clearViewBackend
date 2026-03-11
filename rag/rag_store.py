@@ -1,56 +1,35 @@
-from pathlib import Path
-
-from langchain_community.document_loaders import DirectoryLoader, TextLoader
-from langchain_community.vectorstores import FAISS
-from langchain_core.documents import Document
-from langchain_text_splitters import RecursiveCharacterTextSplitter
+from pymongo import MongoClient
+from langchain_mongodb import MongoDBAtlasVectorSearch
 
 from models import embeddings
+from env import (
+    ATLAS_VECTOR_SEARCH_INDEX_NAME,
+    DB_NAME,
+    MONGODB_COLLECTION,
+    MONGODB_CONNECTION_STRING,
+)
 
-
-DATA_DIR = Path(__file__).resolve().parent.parent / "data"
-
-
-def _load_documents() -> list[Document]:
-    if not DATA_DIR.exists():
-        return [
-            Document(
-                page_content=(
-                    "No dataset found in data/ directory. Add source files to "
-                    "improve retrieval quality."
-                ),
-                metadata={"source": "system"},
-            )
-        ]
-
-    loader = DirectoryLoader(
-        str(DATA_DIR),
-        glob="**/*",
-        show_progress=False,
-        use_multithreading=True,
-        loader_cls=TextLoader,
-        silent_errors=True,
-    )
-    docs = loader.load()
-    if docs:
-        return docs
-
-    return [
-        Document(
-            page_content=(
-                "Dataset directory is empty. Add documents under data/ for RAG."
-            ),
-            metadata={"source": "system"},
-        )
+if not all(
+    [
+        MONGODB_CONNECTION_STRING,
+        DB_NAME,
+        MONGODB_COLLECTION,
+        ATLAS_VECTOR_SEARCH_INDEX_NAME,
     ]
+):
+    raise RuntimeError(
+        "MongoDB Atlas RAG is not configured. Set MONGODB_CONNECTION_STRING, "
+        "DB_NAME, MONGODB_COLLECTION, and ATLAS_VECTOR_SEARCH_INDEX_NAME."
+    )
 
+client = MongoClient(MONGODB_CONNECTION_STRING)
+collection = client[DB_NAME][MONGODB_COLLECTION]
 
-def _build_vectorstore() -> FAISS:
-    docs = _load_documents()
-    splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
-    split_docs = splitter.split_documents(docs)
-    return FAISS.from_documents(split_docs, embeddings)
+vectorstore = MongoDBAtlasVectorSearch(
+    collection=collection,
+    embedding=embeddings,
+    index_name=ATLAS_VECTOR_SEARCH_INDEX_NAME,
+    relevance_score_fn="cosine",
+)
 
-
-vectorstore = _build_vectorstore()
 retriever = vectorstore.as_retriever(search_kwargs={"k": 4})

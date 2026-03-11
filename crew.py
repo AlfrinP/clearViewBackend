@@ -175,7 +175,7 @@ def run_fake_news_pipeline(news_text: str) -> dict:
         verbose=False,
     )
     initial_result = initial_crew.kickoff()
-    logger.info("Initial crew completed.")
+    logger.info("Initial crew completed.",initial_result)
 
     initial_outputs = getattr(initial_result, "tasks_output", [])
     retrieve_json = _safe_json(
