@@ -1,10 +1,17 @@
-from langchain_google_genai import ChatGoogleGenerativeAI
+from crewai import LLM
+from langchain_groq import ChatGroq
 from langchain_huggingface import HuggingFaceEmbeddings
 
-from env import GOOGLE_API_KEY
+from env import GOOGLE_API_KEY, GROQ_API_KEY, GROQ_MAX_TOKENS, GROQ_MODEL, GROQ_TEMPERATURE
 
-llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash-lite", api_key=GOOGLE_API_KEY)
+llm = ChatGroq(
+    model=GROQ_MODEL,
+    api_key=GROQ_API_KEY,
+    temperature=GROQ_TEMPERATURE,
+    max_tokens=GROQ_MAX_TOKENS,
+)
 
-crew_llm = ChatGoogleGenerativeAI(model="gemini-3-flash", api_key=GOOGLE_API_KEY)
+crew_llm = LLM(
+    model="gemini-3-flash", api_key=GOOGLE_API_KEY)
 
 embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-mpnet-base-v2")

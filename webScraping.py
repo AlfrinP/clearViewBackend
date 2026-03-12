@@ -1,11 +1,11 @@
 from models import crew_llm
-from crewai_tools import SerperDevTool
+from crewai_tools import ScrapeWebsiteTool, TavilySearchTool
 from crewai import Agent, Task, Crew
 
 
 def setup_web_scraping_agent():
     """Setup the web scraping agent and related components"""
-    search_tool = SerperDevTool()  # Tool for performing web searches
+    search_tool = TavilySearchTool(max_results=3)  # Tool for web search
     scrape_website = ScrapeWebsiteTool()  # Tool for extracting data from websites
 
     # Define the web search agent

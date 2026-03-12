@@ -1,6 +1,6 @@
 from langchain_mongodb import MongoDBAtlasVectorSearch
-from rag.model.embeddingModel import embeddings
-from rag.envVariables import MONGODB_COLLECTION, DB_NAME,ATLAS_VECTOR_SEARCH_INDEX_NAME, MONGODB_CONNECTION_STRING
+from models import embeddings
+from env import MONGODB_COLLECTION, DB_NAME,ATLAS_VECTOR_SEARCH_INDEX_NAME, MONGODB_CONNECTION_STRING
 from pymongo import MongoClient
 
 
