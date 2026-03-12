@@ -2,7 +2,7 @@ from crewai import LLM
 from langchain_groq import ChatGroq
 from langchain_huggingface import HuggingFaceEmbeddings
 
-from env import GOOGLE_API_KEY, GROQ_API_KEY, GROQ_MAX_TOKENS, GROQ_MODEL, GROQ_TEMPERATURE
+from env import GROQ_API_KEY, GROQ_MAX_TOKENS, GROQ_MODEL, GROQ_TEMPERATURE
 
 llm = ChatGroq(
     model=GROQ_MODEL,
@@ -12,6 +12,10 @@ llm = ChatGroq(
 )
 
 crew_llm = LLM(
-    model="gemini-3-flash", api_key=GOOGLE_API_KEY)
+    model=f"groq/{GROQ_MODEL}",
+    api_key=GROQ_API_KEY,
+    temperature=GROQ_TEMPERATURE,
+    max_tokens=GROQ_MAX_TOKENS,
+)
 
 embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-mpnet-base-v2")

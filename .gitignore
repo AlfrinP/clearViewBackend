@@ -36,3 +36,6 @@ archive.zip
 .DS_Store
 
 .codspeed
+
+.env
+.env.local
