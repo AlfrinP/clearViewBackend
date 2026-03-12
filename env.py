@@ -17,7 +17,7 @@ DB_NAME = os.getenv("DB_NAME")
 
 GROQ_MODEL = os.getenv("GROQ_MODEL")
 GROQ_TEMPERATURE = float(os.getenv("GROQ_TEMPERATURE", "0.2"))
-GROQ_MAX_TOKENS = int(os.getenv("GROQ_MAX_TOKENS", "1024"))
+GROQ_MAX_TOKENS = int(os.getenv("GROQ_MAX_TOKENS", "500"))
 
 RAG_SIMILARITY_THRESHOLD = float(os.getenv("RAG_SIMILARITY_THRESHOLD", "0.75"))
 

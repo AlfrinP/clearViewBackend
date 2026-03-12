@@ -1,4 +1,5 @@
 import logging
+from functools import lru_cache
 from typing import Type
 
 from crewai.tools import BaseTool
@@ -7,6 +8,7 @@ from pydantic import BaseModel, Field
 from rag.rag_store import retriever
 
 logger = logging.getLogger(__name__)
+MAX_PASSAGE_CHARS = 300
 
 
 class RAGToolInput(BaseModel):
@@ -21,8 +23,13 @@ class RAGTool(BaseTool):
     )
     args_schema: Type[BaseModel] = RAGToolInput
 
+    @staticmethod
+    @lru_cache(maxsize=100)
+    def _retrieve(query: str):
+        return tuple(retriever.get_relevant_documents(query))
+
     def _run(self, query: str) -> str:
-        docs = retriever.get_relevant_documents(query)
+        docs = list(self._retrieve(query))
         if not docs:
             logger.info("RAG retrieval returned 0 docs for query=%r", query)
             return "No relevant internal evidence found."
@@ -33,7 +40,12 @@ class RAGTool(BaseTool):
             snippet = doc.page_content.replace("\n", " ").strip()[:300]
             logger.info("RAG hit %d | source=%s | snippet=%s", idx, source, snippet)
 
-        return "\n\n".join(doc.page_content for doc in docs)
+        compact_passages = []
+        for doc in docs:
+            source = str(doc.metadata.get("source", "unknown")).strip()
+            passage = doc.page_content.replace("\n", " ").strip()[:MAX_PASSAGE_CHARS]
+            compact_passages.append(f"source={source} | passage={passage}")
+        return "\n\n".join(compact_passages)
 
 
 rag_tool = RAGTool()

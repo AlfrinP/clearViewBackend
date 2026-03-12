@@ -19,6 +19,12 @@ from tasks.retrieve_evidence import create_retrieve_evidence_task
 from tasks.verify_facts import create_verify_facts_task
 
 logger = logging.getLogger(__name__)
+MAX_INPUT_CHARS = 1200
+
+
+def _normalize_input_text(news_text: str) -> str:
+    compact = re.sub(r"\s+", " ", news_text).strip()
+    return compact[:MAX_INPUT_CHARS]
 
 
 def _task_output_to_text(task_output: Any) -> str:
@@ -148,18 +154,26 @@ def _mock_result(news_text: str) -> dict:
 
 def run_fake_news_pipeline(news_text: str) -> dict:
     logger.info("Starting fake-news pipeline.")
+    normalized_text = _normalize_input_text(news_text)
+    if len(news_text) != len(normalized_text):
+        logger.info(
+            "Input normalized/truncated. original_chars=%d normalized_chars=%d",
+            len(news_text),
+            len(normalized_text),
+        )
+
     if MOCK_PIPELINE:
         logger.info("MOCK_PIPELINE enabled. Returning mock result.")
-        return _mock_result(news_text)
+        return _mock_result(normalized_text)
 
     if not GROQ_API_KEY:
         raise RuntimeError("GROQ_API_KEY is required unless MOCK_PIPELINE=true.")
 
     logger.info("Creating initial tasks: extract -> retrieve -> verify")
-    extract_task = create_extract_information_task(input_agent, news_text)
+    extract_task = create_extract_information_task(input_agent, normalized_text)
     retrieve_task = create_retrieve_evidence_task(
         rag_agent,
-        news_text,
+        normalized_text,
         extract_task,
     )
     verify_task = create_verify_facts_task(evaluation_agent, retrieve_task)
@@ -175,7 +189,7 @@ def run_fake_news_pipeline(news_text: str) -> dict:
         verbose=False,
     )
     initial_result = initial_crew.kickoff()
-    logger.info("Initial crew completed.",initial_result)
+    logger.info("Initial crew completed.")
 
     initial_outputs = getattr(initial_result, "tasks_output", [])
     retrieve_json = _safe_json(
@@ -183,6 +197,11 @@ def run_fake_news_pipeline(news_text: str) -> dict:
     )
     verify_json = _safe_json(
         _task_output_to_text(initial_outputs[2] if len(initial_outputs) > 2 else None)
+    )
+    logger.info(
+        "Initial stage payload sizes: retrieve_json_chars=%d verify_json_chars=%d",
+        len(json.dumps(retrieve_json, ensure_ascii=False)),
+        len(json.dumps(verify_json, ensure_ascii=False)),
     )
 
     similarity_score = float(
@@ -229,7 +248,7 @@ def run_fake_news_pipeline(news_text: str) -> dict:
         return decision_json
 
     logger.info("RAG evidence insufficient. Running web search fallback path.")
-    web_task = create_web_search_task(web_search_agent, news_text, verify_task)
+    web_task = create_web_search_task(web_search_agent, normalized_text, verify_task)
     decision_task = create_produce_final_result_task(
         decision_agent, [verify_task, web_task]
     )
@@ -280,5 +299,9 @@ def run_fake_news_pipeline(news_text: str) -> dict:
     decision_json.setdefault("rag_evidence", retrieve_json.get("rag_evidence", []))
     web_sources = _normalize_web_sources(web_json.get("web_sources", []))
     decision_json.setdefault("web_sources", web_sources)
-    logger.info("Pipeline finished. web_sources_count=%d", len(web_sources))
+    logger.info(
+        "Pipeline finished. web_sources_count=%d final_payload_chars=%d",
+        len(web_sources),
+        len(json.dumps(decision_json, ensure_ascii=False)),
+    )
     return decision_json

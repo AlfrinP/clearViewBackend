@@ -32,4 +32,4 @@ vectorstore = MongoDBAtlasVectorSearch(
     relevance_score_fn="cosine",
 )
 
-retriever = vectorstore.as_retriever(search_kwargs={"k": 4})
+retriever = vectorstore.as_retriever(search_kwargs={"k": 2})

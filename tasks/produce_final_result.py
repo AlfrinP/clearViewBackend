@@ -14,6 +14,7 @@ def create_produce_final_result_task(agent, task_context: list[Task]) -> Task:
             "Keep the response compact and valid JSON only.\n"
             "Limit web_sources to 3 items and cap each content field to "
             "400 characters.\n"
+            "Keep reasoning concise and under 100 words.\n"
             "Classifications allowed: Real, Fake, Uncertain.\n"
             "Confidence must be between 0 and 1 and reflect evidence quality."
         ),

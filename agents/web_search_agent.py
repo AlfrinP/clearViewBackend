@@ -13,5 +13,6 @@ web_search_agent = Agent(
     llm=crew_llm,
     tools=[tavily_web_search_tool],
     allow_delegation=False,
+    max_iter=1,
     verbose=False,
 )

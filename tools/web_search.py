@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 from typing import TypedDict
 
 from env import TAVILY_API_KEY
@@ -15,6 +16,16 @@ class WebSearchResult(TypedDict):
     title: str
     content: str
     url: str
+
+
+def _clean_content(text: str) -> str:
+    text = text.replace("\n", " ").strip()
+    text = re.sub(r"\s+", " ", text)
+    # Remove repeated boilerplate that bloats tokens.
+    for token in ["Advertisement", "By Category", "[...]", "## By Category"]:
+        text = text.replace(token, "")
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
 
 
 def _get_tavily_client() -> TavilyClient | None:
@@ -50,17 +61,23 @@ def tavily_web_search(query: str, max_results: int = MAX_SOURCE_COUNT) -> list[W
 
     raw_results = response.get("results", []) if isinstance(response, dict) else []
     cleaned: list[WebSearchResult] = []
-    for item in raw_results[:max_results]:
+    seen_keys: set[tuple[str, str]] = set()
+    for item in raw_results:
         if not isinstance(item, dict):
             continue
-        content = str(item.get("content", "")).strip()
+        title = str(item.get("title", "")).strip()
+        url = str(item.get("url", "")).strip()
+        key = (title.lower(), url.lower())
+        if key in seen_keys:
+            continue
+        seen_keys.add(key)
+
+        content = _clean_content(str(item.get("content", "")))
         cleaned.append(
-            {
-                "title": str(item.get("title", "")).strip(),
-                "content": content[:MAX_CONTENT_CHARS],
-                "url": str(item.get("url", "")).strip(),
-            }
+            {"title": title, "content": content[:MAX_CONTENT_CHARS], "url": url}
         )
+        if len(cleaned) >= max_results:
+            break
 
     logger.debug("Tavily web search returned %s result(s).", len(cleaned))
     return cleaned

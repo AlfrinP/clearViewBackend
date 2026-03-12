@@ -1,30 +1,65 @@
-import argparse
 import json
 import logging
 
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel, Field
+
+from fastapi.middleware.cors import CORSMiddleware
+
 from crew import run_fake_news_pipeline
 
+app = FastAPI(title="ClearView Fake News API", version="1.0.0")
 
-def main() -> None:
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins="*",
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+class VerifyNewsRequest(BaseModel):
+    news: str = Field(..., min_length=1, description="News text to verify.")
+
+
+class VerifyNewsResponse(BaseModel):
+    classification: str
+    confidence: float
+    reasoning: str
+    rag_evidence: list
+    web_sources: list
+
+
+@app.on_event("startup")
+def _configure_logging() -> None:
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
     )
-    parser = argparse.ArgumentParser(description="CrewAI fake news detection")
-    parser.add_argument(
-        "--news",
-        type=str,
-        help="News text to analyze. If omitted, interactive prompt is used.",
-    )
-    args = parser.parse_args()
 
-    news_text = args.news or input("Enter news text to verify: ").strip()
+
+@app.get("/health")
+def health() -> dict[str, str]:
+    return {"status": "ok"}
+
+
+@app.post("/verify-new", response_model=VerifyNewsResponse)
+def verify_new(payload: VerifyNewsRequest) -> dict:
+    news_text = payload.news.strip()
     if not news_text:
-        raise ValueError("News text cannot be empty.")
+        raise HTTPException(status_code=400, detail="news must not be empty")
 
-    result = run_fake_news_pipeline(news_text)
-    print(json.dumps(result, indent=2))
+    try:
+        result = run_fake_news_pipeline(news_text)
+    except Exception as exc:
+        print(exc)
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    return json.loads(json.dumps(result))
 
 
 if __name__ == "__main__":
-    main()
+    import uvicorn
+
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

@@ -115,3 +115,5 @@ duckduckgo-search
 pandas
 tavily-python
 faiss-cpu
+fastapi
+uvicorn

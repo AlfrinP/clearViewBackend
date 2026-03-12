@@ -10,5 +10,6 @@ rag_agent = Agent(
     llm=crew_llm,
     tools=[rag_tool],
     allow_delegation=False,
+    max_iter=1,
     verbose=False,
 )
