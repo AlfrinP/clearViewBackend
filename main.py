@@ -7,8 +7,21 @@ from pydantic import BaseModel, Field
 from models import llm
 from rag.vectorDb import vector_store
 from webScraping import get_web_content
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
+
+origins = [
+    "*",  # Frontend dev server  # Production frontend
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,  # Only these origins are allowed
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 class VerifyNewsRequest(BaseModel):
