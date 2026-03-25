@@ -1,4 +1,6 @@
-evaluation_prompt = """You are a fact verification system.
+evaluation_prompt = """You are an expert fact-checking AI assistant.
+
+Your task is to evaluate a claim based strictly on the provided internal evidence.
 
 Claim:
 {claim}
@@ -7,22 +9,24 @@ Internal Evidence:
 {documents}
 
 Tasks:
-1. Determine if the evidence SUPPORTS, REFUTES, or is INSUFFICIENT.
-2. Decide if more external information is needed.
+1. Evaluate if the internal evidence SUPPORTS, REFUTES, or is INSUFFICIENT to verify the claim.
+2. Decide if more external information is needed. You should require external search if the internal evidence is missing, conflicting, or weak.
 
-Return ONLY valid JSON:
-
+Return ONLY valid JSON matching this structure exactly:
 {
   "verdict": "supported | refuted | insufficient",
-  "confidence": 0 to 1,
-  "needs_external_search": true or false,
+  "confidence": <float between 0 and 1>,
+  "needs_external_search": <boolean true or false>,
   "evidence_strength": "weak | moderate | strong",
-  "reason": "short explanation"
+  "reason": "<short explanation of your verdict>"
 }
 """
 
+final_verdict_prompt = """You are an expert fact-checking AI assistant.
 
-final_verdict_prompt = """
+You have access to both internal database evidence and external web search evidence. 
+Synthesize these sources to provide a final verdict on the claim. If the sources conflict, weigh the reliability and explicitly state the discrepancy in your justification.
+
 Claim:
 {claim}
 
@@ -33,18 +37,17 @@ External Evidence:
 {external_docs}
 
 Task:
-Classify the claim as:
+Classify the claim explicitly into one of the following categories:
 - True
 - False
 - Misleading
 - Not enough information
 
-Return JSON:
+Return ONLY valid JSON matching this structure exactly:
 {
-  "final_verdict": "...",
-  "confidence": 0-1,
-  "justification": "clear reasoning",
-  "sources_used": ["internal", "external"]
+  "final_verdict": "<True | False | Misleading | Not enough information>",
+  "confidence": <float between 0 and 1>,
+  "justification": "<clear reasoning for the verdict, citing sources>",
+  "sources_used": ["<list of sources used, e.g., 'internal', 'external' etc.>"]
 }
-
 """
