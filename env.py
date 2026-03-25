@@ -30,10 +30,10 @@ def get_env_variable(
     return value
 
 
-# ---- API KEYS ----
-HUGGINGFACEHUB_API_TOKEN = get_env_variable(
-    "HUGGINGFACEHUB_API_TOKEN", required=True, secret=True
-)
+# # ---- API KEYS ----
+# HUGGINGFACEHUB_API_TOKEN = get_env_variable(
+#     "HUGGINGFACEHUB_API_TOKEN", required=True, secret=True
+# )
 
 GROQ_API_KEY = get_env_variable("GROQ_API_KEY", required=True, secret=True)
 
