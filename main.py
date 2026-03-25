@@ -1,8 +1,8 @@
-from langgraph.graph import StateGraph
+from langgraph.graph import StateGraph, END
 from nodes import internal_retrieval, evaluate, external_retrieval, final_answer
-from nodes import should_search_more
+from nodes import should_search_more, GraphState
 
-graph = StateGraph()
+graph = StateGraph(GraphState)
 
 graph.add_node("internal", internal_retrieval)
 graph.add_node("evaluate", evaluate)
@@ -14,8 +14,10 @@ graph.set_entry_point("internal")
 graph.add_edge("internal", "evaluate")
 
 graph.add_conditional_edges(
-    "evaluate", should_search_more, {"external_retrieval": "external", "final": "final"}
+    "evaluate", should_search_more, {"external": "external", "final": "final"}
 )
 
 graph.add_edge("external", "final")
-graph.add_edge("final", "end")
+graph.add_edge("final", END)
+
+app = graph.compile()

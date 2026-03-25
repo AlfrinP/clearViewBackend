@@ -53,6 +53,10 @@ MODEL_TIMEOUT = get_env_variable("MODEL_TIMEOUT", default=60, cast_type=int)
 
 
 # ---- DATABASE CONFIG ----
+MONGO_URI = get_env_variable("MONGO_URI", required=True, secret=True)
+
+MONGO_DB_NAME = get_env_variable("MONGO_DB_NAME", default="fake_news_db")
+
 MONGODB_COLLECTION = get_env_variable("MONGODB_COLLECTION", default="documents")
 
 ATLAS_VECTOR_SEARCH_INDEX_NAME = get_env_variable(
