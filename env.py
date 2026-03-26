@@ -66,6 +66,14 @@ ATLAS_VECTOR_SEARCH_INDEX_NAME = get_env_variable(
 # ---- LANGSMITH API KEY ----
 LANGSMITH_API_KEY = get_env_variable("LANGSMITH_API_KEY", required=True, secret=True)
 
+# ---- APPWRITE CONFIG ----
+APPWRITE_ENDPOINT = get_env_variable("APPWRITE_ENDPOINT", required=True, secret=True)
+APPWRITE_PROJECT_ID = get_env_variable(
+    "APPWRITE_PROJECT_ID", required=True, secret=True
+)
+APPWRITE_API_KEY = get_env_variable("APPWRITE_API_KEY", required=True, secret=True)
+APPWRITE_BUCKET_ID = get_env_variable("APPWRITE_BUCKET_ID", default="documents")
+
 
 # ---- DEBUG PRINT (optional) ----
 if __name__ == "__main__":
