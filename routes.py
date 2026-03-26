@@ -1,9 +1,15 @@
 from __future__ import annotations
 import datetime
 
-from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
+from pymongo.asynchronous.collection import AsyncCollection
+from appwrite.services.storage import Storage
 
-from appwriteClient import delete_file_from_bucket, upload_file_to_bucket
+from appwriteClient import (
+    appwrite_storage_dependency,
+    delete_file_from_bucket,
+    upload_file_to_bucket,
+)
 from dao.verification_dao import verify_claim
 from dtos import (
     VerifyNewsRequest,
@@ -14,7 +20,7 @@ from dtos import (
     FilesPageResponse,
     UploadFileResponse,
 )
-from monogoDb import collection
+from monogoDb import mongo_collection_dependency
 
 router = APIRouter(
     prefix="/api/v1",
@@ -44,7 +50,11 @@ def verify_news(payload: VerifyNewsRequest) -> VerifyNewsResponse:
 
 
 @router.delete("/files/{file_id}", response_model=DeleteFileResponse)
-async def delete_file(file_id: str) -> DeleteFileResponse:
+async def delete_file(
+    file_id: str,
+    collection: AsyncCollection = Depends(mongo_collection_dependency),
+    storage: Storage = Depends(appwrite_storage_dependency),
+) -> DeleteFileResponse:
     metadata = await collection.find_one({"file_id": file_id})
     if metadata is None:
         raise HTTPException(status_code=404, detail="File metadata not found")
@@ -55,7 +65,7 @@ async def delete_file(file_id: str) -> DeleteFileResponse:
             raise HTTPException(status_code=404, detail="File metadata not found")
 
         try:
-            await delete_file_from_bucket(file_id=file_id)
+            await delete_file_from_bucket(storage=storage, file_id=file_id)
         except Exception as appwrite_error:
             # Compensating action: restore metadata if storage delete fails.
             await collection.insert_one(metadata)
@@ -78,11 +88,17 @@ async def delete_file(file_id: str) -> DeleteFileResponse:
 
 
 @router.post("/upload-file", response_model=UploadFileResponse)
-async def upload_file(file: UploadFile = File(...), file_title: str = Form(...)):
+async def upload_file(
+    file: UploadFile = File(...),
+    file_title: str = Form(...),
+    collection: AsyncCollection = Depends(mongo_collection_dependency),
+    storage: Storage = Depends(appwrite_storage_dependency),
+):
     created_file_id = None
     try:
         file_content = await file.read()
         created_file = await upload_file_to_bucket(
+            storage=storage,
             file_bytes=file_content,
             filename=file.filename or "uploaded_file",
         )
@@ -102,7 +118,7 @@ async def upload_file(file: UploadFile = File(...), file_title: str = Form(...))
         except Exception as mongo_error:
             # Compensating action: rollback Appwrite upload if metadata write fails.
             try:
-                await delete_file_from_bucket(file_id=created_file_id)
+                await delete_file_from_bucket(storage=storage, file_id=created_file_id)
             except Exception as rollback_error:
                 raise HTTPException(
                     status_code=500,
@@ -130,6 +146,7 @@ async def upload_file(file: UploadFile = File(...), file_title: str = Form(...))
 async def get_files(
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=10, ge=1, le=100),
+    collection: AsyncCollection = Depends(mongo_collection_dependency),
 ) -> FilesPageResponse:
     skip = (page - 1) * limit
     try:
