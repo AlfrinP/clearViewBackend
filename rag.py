@@ -8,7 +8,9 @@ from env import (
     MONGO_DB_NAME,
 )
 
-embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-mpnet-base-v2")
+embeddings = HuggingFaceEmbeddings(
+    model_name="sentence-transformers/all-mpnet-base-v2",
+)
 
 client = MongoClient(MONGO_URI)
 collection = client[MONGO_DB_NAME][MONGODB_COLLECTION]
