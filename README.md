@@ -41,7 +41,7 @@ An agentic AI pipeline built using [LangGraph](https://github.com/langchain-ai/l
 Start the API server:
 
 ```bash
-uvicorn main:app --host 0.0.0.0 --port 8000
+uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
 ### Endpoint: `POST /api/v1/verify-news`
