@@ -1,6 +1,6 @@
 from langchain.tools import tool
 from rag import vector_store
-from langchain_tavily import TavilySearchResults
+from langchain_tavily import TavilySearch
 
 
 @tool(response_format="content_and_artifact")
@@ -17,7 +17,7 @@ def retrieve_context(query: str):
 @tool
 def web_search(query: str):
     """Search the web for information."""
-    search = TavilySearchResults(
+    search = TavilySearch(
         max_results=5,
         topic="general",
     )

@@ -31,9 +31,9 @@ def get_env_variable(
 
 
 # # ---- API KEYS ----
-# HUGGINGFACEHUB_API_TOKEN = get_env_variable(
-#     "HUGGINGFACEHUB_API_TOKEN", required=True, secret=True
-# )
+HUGGINGFACEHUB_API_TOKEN = get_env_variable(
+    "HUGGINGFACEHUB_API_TOKEN", required=True, secret=True
+)
 
 GROQ_API_KEY = get_env_variable("GROQ_API_KEY", required=True, secret=True)
 
@@ -62,6 +62,9 @@ MONGODB_COLLECTION = get_env_variable("MONGODB_COLLECTION", default="documents")
 ATLAS_VECTOR_SEARCH_INDEX_NAME = get_env_variable(
     "ATLAS_VECTOR_SEARCH_INDEX_NAME", default="vector_index"
 )
+
+# ---- LANGSMITH API KEY ----
+LANGSMITH_API_KEY = get_env_variable("LANGSMITH_API_KEY", required=True, secret=True)
 
 
 # ---- DEBUG PRINT (optional) ----
