@@ -1,17 +1,14 @@
-import os
-from dotenv import load_dotenv
 import getpass
+import os
+
+from dotenv import load_dotenv
 
 load_dotenv()
 
 
 def get_env_variable(
-    key: str, default=None, cast_type=None, required=False, secret=False
+    key: str, default=None, cast_type=None, required: bool = False, secret: bool = False
 ):
-    """
-    Fetch environment variable with optional casting and fallback.
-    Prompts user if secret and not found.
-    """
     value = os.getenv(key, default)
 
     if value is None and required:
@@ -24,57 +21,35 @@ def get_env_variable(
     if value is not None and cast_type:
         try:
             value = cast_type(value)
-        except ValueError:
-            raise ValueError(f"Invalid type for {key}, expected {cast_type}")
+        except ValueError as e:
+            raise ValueError(f"Invalid type for {key}, expected {cast_type}") from e
 
     return value
 
 
-# # ---- API KEYS ----
 HUGGINGFACEHUB_API_TOKEN = get_env_variable(
     "HUGGINGFACEHUB_API_TOKEN", required=True, secret=True
 )
-
 GROQ_API_KEY = get_env_variable("GROQ_API_KEY", required=True, secret=True)
-
 TAVILY_API_KEY = get_env_variable("TAVILY_API_KEY", required=True, secret=True)
 
-
-# ---- MODEL CONFIG ----
 LLM_MODEL = get_env_variable("LLM_MODEL", default="llama3-70b-8192")
-
 MODEL_TEMPERATURE = get_env_variable("MODEL_TEMPERATURE", default=0.7, cast_type=float)
-
 MODEL_MAX_TOKENS = get_env_variable("MODEL_MAX_TOKENS", default=1024, cast_type=int)
-
 MODEL_MAX_RETRIES = get_env_variable("MODEL_MAX_RETRIES", default=3, cast_type=int)
-
 MODEL_TIMEOUT = get_env_variable("MODEL_TIMEOUT", default=60, cast_type=int)
 
-
-# ---- DATABASE CONFIG ----
 MONGO_URI = get_env_variable("MONGO_URI", required=True, secret=True)
-
 MONGO_DB_NAME = get_env_variable("MONGO_DB_NAME", default="fake_news_db")
-
 MONGODB_COLLECTION = get_env_variable("MONGODB_COLLECTION", default="documents")
-
 ATLAS_VECTOR_SEARCH_INDEX_NAME = get_env_variable(
     "ATLAS_VECTOR_SEARCH_INDEX_NAME", default="vector_index"
 )
 
-# ---- LANGSMITH API KEY ----
 LANGSMITH_API_KEY = get_env_variable("LANGSMITH_API_KEY", required=True, secret=True)
 
-# ---- APPWRITE CONFIG ----
 APPWRITE_ENDPOINT = get_env_variable("APPWRITE_ENDPOINT", required=True, secret=True)
-APPWRITE_PROJECT_ID = get_env_variable(
-    "APPWRITE_PROJECT_ID", required=True, secret=True
-)
+APPWRITE_PROJECT_ID = get_env_variable("APPWRITE_PROJECT_ID", required=True, secret=True)
 APPWRITE_API_KEY = get_env_variable("APPWRITE_API_KEY", required=True, secret=True)
 APPWRITE_BUCKET_ID = get_env_variable("APPWRITE_BUCKET_ID", default="documents")
 
-
-# ---- DEBUG PRINT (optional) ----
-if __name__ == "__main__":
-    print("Configuration Loaded Successfully")

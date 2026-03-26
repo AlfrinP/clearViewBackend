@@ -24,7 +24,7 @@ Return ONLY valid JSON matching this structure exactly:
 
 final_verdict_prompt = """You are an expert fact-checking AI assistant.
 
-You have access to both internal database evidence and external web search evidence. 
+You have access to both internal database evidence and external web search evidence.
 Synthesize these sources to provide a final verdict on the claim. If the sources conflict, weigh the reliability and explicitly state the discrepancy in your justification.
 
 Claim:
@@ -51,3 +51,4 @@ Return ONLY valid JSON matching this structure exactly:
   "sources_used": ["<list of sources used, e.g., 'internal', 'external' etc.>"]
 }}
 """
+

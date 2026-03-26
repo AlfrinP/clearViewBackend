@@ -1,6 +1,6 @@
 from langgraph.graph import END, StateGraph
 
-from nodes import (
+from app.ai.nodes import (
     GraphState,
     evaluate,
     external_retrieval,

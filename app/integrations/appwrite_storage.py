@@ -1,15 +1,16 @@
+from fastapi import Request
 from appwrite.client import Client
 from appwrite.id import ID
 from appwrite.input_file import InputFile
 from appwrite.services.storage import Storage
-from fastapi import Request
 
-from env import (
+from app.core.config import (
     APPWRITE_API_KEY,
     APPWRITE_BUCKET_ID,
     APPWRITE_ENDPOINT,
     APPWRITE_PROJECT_ID,
 )
+
 
 def create_appwrite_storage() -> Storage:
     client = Client()
@@ -46,3 +47,4 @@ async def delete_file_from_bucket(storage: Storage, file_id: str) -> None:
 
 async def appwrite_storage_dependency(request: Request) -> Storage:
     return request.app.state.appwrite_storage
+

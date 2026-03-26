@@ -1,5 +1,12 @@
 from langchain_groq import ChatGroq
-from env import LLM_MODEL, MODEL_TEMPERATURE, MODEL_MAX_TOKENS, MODEL_MAX_RETRIES, MODEL_TIMEOUT
+
+from app.core.config import (
+    LLM_MODEL,
+    MODEL_MAX_RETRIES,
+    MODEL_MAX_TOKENS,
+    MODEL_TEMPERATURE,
+    MODEL_TIMEOUT,
+)
 
 llm = ChatGroq(
     model=LLM_MODEL,
@@ -8,3 +15,4 @@ llm = ChatGroq(
     timeout=MODEL_TIMEOUT,
     max_retries=MODEL_MAX_RETRIES,
 )
+

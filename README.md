@@ -11,7 +11,7 @@ An agentic AI pipeline built using [LangGraph](https://github.com/langchain-ai/l
 
 ## 🛠️ Project Architecture
 
-1.  **Incoming Claim**: A claim is received via the FastAPI endpoint (`POST /verify-news`).
+1.  **Incoming Claim**: A claim is received via the FastAPI endpoint (`POST /api/v1/verify-news`).
 2.  **Internal Retrieval**: Semantically queries MongoDB for relevant internal documents.
 3.  **Evaluation Node**: A Groq-powered evaluation prompt determines if the claim is `[supported | refuted | insufficient]` based _only_ on the internal data.
 4.  **Conditional Edge (`decide`)**: If the evidence is weak, conflicting, or missing, the graph routes the query to the web. Otherwise, it proceeds to make a final decision.
@@ -44,7 +44,7 @@ Start the API server:
 uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 
-### Endpoint: `POST /verify-news`
+### Endpoint: `POST /api/v1/verify-news`
 
 #### Request
 
@@ -78,7 +78,13 @@ uvicorn main:app --host 0.0.0.0 --port 8000
 #### cURL
 
 ```bash
-curl -X POST "http://127.0.0.1:8000/verify-news" \
+curl -X POST "http://127.0.0.1:8000/api/v1/verify-news" \
   -H "Content-Type: application/json" \
   -d '{"claim":"The speed of light is 299,792,458 meters per second."}'
 ```
+
+### File Endpoints
+
+- `POST /api/v1/upload-file` (multipart: `file`, `file_title`)
+- `GET /api/v1/files?page=1&limit=10`
+- `DELETE /api/v1/files/{file_id}`

@@ -1,11 +1,15 @@
 from __future__ import annotations
+
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from appwriteClient import create_appwrite_storage, ensure_appwrite_connection
-from monogoDb import create_mongo_client, ensure_mongo_connection, get_mongo_collection
-from routes import router
+from app.api.routes import router
+from app.db.mongo import create_mongo_client, ensure_mongo_connection, get_mongo_collection
+from app.integrations.appwrite_storage import (
+    create_appwrite_storage,
+    ensure_appwrite_connection,
+)
 
 
 @asynccontextmanager
@@ -26,3 +30,4 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="ClearView Backend", version="2.0", lifespan=lifespan)
 app.include_router(router)
+

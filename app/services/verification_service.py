@@ -1,8 +1,6 @@
-from __future__ import annotations
-
 from typing import Any
 
-from verification_graph import verification_graph
+from app.ai.graph import verification_graph
 
 
 def verify_claim(claim: str) -> dict[str, Any]:
@@ -14,3 +12,4 @@ def verify_claim(claim: str) -> dict[str, Any]:
         "result": {},
     }
     return verification_graph.invoke(initial_state)
+

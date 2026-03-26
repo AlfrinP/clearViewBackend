@@ -3,7 +3,7 @@ from fastapi import Request
 from pymongo import AsyncMongoClient
 from pymongo.asynchronous.collection import AsyncCollection
 
-from env import MONGO_DB_NAME, MONGO_URI, MONGODB_COLLECTION
+from app.core.config import MONGO_DB_NAME, MONGO_URI, MONGODB_COLLECTION
 
 
 def create_mongo_client() -> AsyncMongoClient:
@@ -33,3 +33,4 @@ async def ensure_mongo_connection(client: AsyncMongoClient) -> None:
 
 async def mongo_collection_dependency(request: Request) -> AsyncCollection:
     return request.app.state.mongo_collection
+
