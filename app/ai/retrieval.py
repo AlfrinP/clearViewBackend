@@ -27,4 +27,3 @@ def get_vector_store() -> MongoDBAtlasVectorSearch:
         index_name=ATLAS_VECTOR_SEARCH_INDEX_NAME,
         relevance_score_fn="cosine",
     )
-

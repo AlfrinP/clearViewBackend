@@ -22,9 +22,9 @@ def create_appwrite_storage() -> Storage:
     return Storage(client)
 
 
-async def ensure_appwrite_connection(storage: Storage) -> None:
+def ensure_appwrite_connection(storage: Storage) -> None:
     try:
-        await storage.get_bucket(bucket_id=APPWRITE_BUCKET_ID)
+        storage.get_bucket(bucket_id=APPWRITE_BUCKET_ID)
     except Exception as e:
         raise RuntimeError(
             "Appwrite connection check failed. Verify APPWRITE_ENDPOINT, "
@@ -32,19 +32,18 @@ async def ensure_appwrite_connection(storage: Storage) -> None:
         ) from e
 
 
-async def upload_file_to_bucket(storage: Storage, file_bytes: bytes, filename: str) -> dict:
+def upload_file_to_bucket(storage: Storage, file_bytes: bytes, filename: str) -> dict:
     input_file = InputFile.from_bytes(file_bytes, filename=filename)
-    return await storage.create_file(
+    return storage.create_file(
         bucket_id=APPWRITE_BUCKET_ID,
         file_id=ID.unique(),
         file=input_file,
     )
 
 
-async def delete_file_from_bucket(storage: Storage, file_id: str) -> None:
-    await storage.delete_file(bucket_id=APPWRITE_BUCKET_ID, file_id=file_id)
+def delete_file_from_bucket(storage: Storage, file_id: str) -> None:
+    storage.delete_file(bucket_id=APPWRITE_BUCKET_ID, file_id=file_id)
 
 
-async def appwrite_storage_dependency(request: Request) -> Storage:
+def appwrite_storage_dependency(request: Request) -> Storage:
     return request.app.state.appwrite_storage
-

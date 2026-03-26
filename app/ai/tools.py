@@ -10,7 +10,8 @@ def retrieve_context(query: str):
     vector_store = get_vector_store()
     retrieved_docs = vector_store.similarity_search(query, k=2)
     serialized = "\n\n".join(
-        (f"Source: {doc.metadata}\nContent: {doc.page_content}") for doc in retrieved_docs
+        (f"Source: {doc.metadata}\nContent: {doc.page_content}")
+        for doc in retrieved_docs
     )
     return serialized, retrieved_docs
 
@@ -20,4 +21,3 @@ def web_search(query: str):
     """Search the web for information."""
     search = TavilySearch(max_results=5, topic="general")
     return search.invoke({"query": query})
-
