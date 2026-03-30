@@ -2,7 +2,7 @@ from fastapi import Request
 from appwrite.client import Client
 from appwrite.id import ID
 from appwrite.input_file import InputFile
-from appwrite.services.storage import Storage
+from appwrite.services.storage import File, Storage
 
 from app.core.config import (
     APPWRITE_API_KEY,
@@ -32,13 +32,14 @@ def ensure_appwrite_connection(storage: Storage) -> None:
         ) from e
 
 
-def upload_file_to_bucket(storage: Storage, file_bytes: bytes, filename: str) -> dict:
+def upload_file_to_bucket(storage: Storage, file_bytes: bytes, filename: str) -> File:
     input_file = InputFile.from_bytes(file_bytes, filename=filename)
-    return storage.create_file(
+    create_file_result = storage.create_file(
         bucket_id=APPWRITE_BUCKET_ID,
         file_id=ID.unique(),
         file=input_file,
     )
+    return create_file_result
 
 
 def delete_file_from_bucket(storage: Storage, file_id: str) -> None:

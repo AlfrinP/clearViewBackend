@@ -68,12 +68,12 @@ async def upload_file(
             )
 
         file_content = await file.read()
-        created_file = await upload_file_to_bucket(
+        created_file = upload_file_to_bucket(
             storage=storage,
             file_bytes=file_content,
             filename=filename,
         )
-        created_file_id = created_file["$id"]
+        created_file_id = created_file.id
         now = datetime.datetime.now(datetime.timezone.utc)
         file_size = len(file_content)
 
