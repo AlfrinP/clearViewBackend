@@ -36,6 +36,34 @@ An agentic AI pipeline built using [LangGraph](https://github.com/langchain-ai/l
     cp .env.example .env
     ```
 
+## 🐋 Docker
+
+The image installs **CPU PyTorch** and strips CUDA/NVIDIA-only pins from `requirements.txt` so the build stays portable.
+
+```bash
+docker build -t clearview-backend .
+
+docker run --rm -p 8000:8000 --env-file .env clearview-backend
+```
+
+Then open `http://localhost:8000/docs`.
+
+### Docker Compose
+
+Starts the API and a **MongoDB 7** container for local development (default `MONGO_URI=mongodb://mongo:27017`).
+
+```bash
+docker compose up --build
+```
+
+If you use **MongoDB Atlas** (or any external MongoDB), start only the API and set `MONGO_URI` in `.env`:
+
+```bash
+docker compose up --build --no-deps api
+```
+
+Then open `http://localhost:8000/docs`.
+
 ## 🎮 Usage
 
 Start the API server:
