@@ -1,4 +1,6 @@
-from typing import TypedDict
+from __future__ import annotations
+
+from typing import Any, TypedDict
 
 from pydantic import BaseModel, Field
 
@@ -7,10 +9,11 @@ from app.ai.model_client import llm
 from app.ai.tools import retrieve_context, web_search
 
 
-class GraphState(TypedDict):
+class GraphState(TypedDict, total=False):
     claim: str
     internal_docs: str
     external_docs: str
+    external_sources: list[dict[str, Any]]
     evaluation: dict
     result: dict
 
@@ -62,9 +65,61 @@ def evaluate(state: GraphState) -> dict:
     return {"evaluation": response.model_dump()}
 
 
+def _normalize_external_results(raw: Any) -> list[dict[str, Any]]:
+    """Normalize Tavily / web-search output into a list of source dicts.
+
+    Tavily returns a dict shaped like:
+        {"query": ..., "answer": ..., "results": [{title, url, content, score, ...}, ...]}
+    but we defensively handle strings, lists and missing keys.
+    """
+    if raw is None:
+        return []
+
+    if isinstance(raw, dict):
+        results = raw.get("results") or raw.get("data") or []
+    elif isinstance(raw, list):
+        results = raw
+    else:
+        return []
+
+    normalized: list[dict[str, Any]] = []
+    for item in results:
+        if not isinstance(item, dict):
+            continue
+        normalized.append(
+            {
+                "title": item.get("title"),
+                "url": item.get("url"),
+                "description": item.get("content") or item.get("snippet"),
+                "score": item.get("score"),
+                "published_date": item.get("published_date"),
+            }
+        )
+    return normalized
+
+
+def _format_external_for_llm(sources: list[dict[str, Any]]) -> str:
+    """Render structured external sources into a clean string for the prompt."""
+    if not sources:
+        return ""
+    lines: list[str] = []
+    for idx, src in enumerate(sources, start=1):
+        title = src.get("title") or "Untitled"
+        url = src.get("url") or "n/a"
+        description = src.get("description") or ""
+        lines.append(
+            f"[{idx}] Title: {title}\n    URL: {url}\n    Content: {description}"
+        )
+    return "\n\n".join(lines)
+
+
 def external_retrieval(state: GraphState) -> dict:
-    docs = web_search.invoke({"query": state["claim"]})
-    return {"external_docs": docs}
+    raw = web_search.invoke({"query": state["claim"]})
+    sources = _normalize_external_results(raw)
+    return {
+        "external_docs": _format_external_for_llm(sources),
+        "external_sources": sources,
+    }
 
 
 def final_answer(state: GraphState) -> dict:
@@ -77,4 +132,3 @@ def final_answer(state: GraphState) -> dict:
         )
     )
     return {"result": response.model_dump()}
-

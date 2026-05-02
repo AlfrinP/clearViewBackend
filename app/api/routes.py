@@ -23,34 +23,125 @@ from app.schemas.files import (
     FilesPageResponse,
     UploadFileResponse,
 )
-from app.schemas.news import VerifyNewsRequest, VerifyNewsResponse, VerifyNewsResultDTO
+from app.schemas.news import (
+    ExternalSource,
+    VerifyNewsEvaluationDTO,
+    VerifyNewsRequest,
+    VerifyNewsResponse,
+    VerifyNewsResultDTO,
+)
 from app.services.verification_service import verify_claim
 from langchain_community.document_loaders import PyPDFLoader
 
 router = APIRouter(prefix="/api/v1", tags=["clearview-api"])
 
 
-@router.post("/verify-news", response_model=VerifyNewsResponse)
+@router.post(
+    "/verify-news",
+    response_model=VerifyNewsResponse,
+    summary="Verify a news claim against internal + external evidence",
+    description=(
+        "Runs the ClearView verification pipeline against the supplied claim.\n\n"
+        "**Pipeline:**\n"
+        "1. Retrieve relevant chunks from the internal vector store.\n"
+        "2. Evaluate the claim strictly against that internal evidence.\n"
+        "3. If internal evidence is insufficient, weak, or low-confidence, "
+        "fall back to an external web search (Tavily).\n"
+        "4. Synthesize a final, evidence-grounded verdict.\n\n"
+        "When external search is used, the response includes the **metadata of "
+        "each external source** (title, URL, description, relevance score, "
+        "publication date) under `external_sources`. When the internal "
+        "evidence was sufficient, `external_sources` is an empty list."
+    ),
+    responses={
+        200: {
+            "description": "Verification completed successfully.",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "claim": "NASA confirmed liquid water on the surface of Mars in 2025.",
+                        "evaluation": {
+                            "verdict": "insufficient",
+                            "confidence": 0.4,
+                            "needs_external_search": True,
+                            "evidence_strength": "weak",
+                            "reason": "Internal documents do not directly address the claim.",
+                        },
+                        "result": {
+                            "final_verdict": "Misleading",
+                            "confidence": 0.66,
+                            "justification": (
+                                "External source [1] indicates NASA reported "
+                                "subsurface water signatures, not confirmed "
+                                "surface liquid water. The claim overstates "
+                                "the announcement..."
+                            ),
+                            "sources_used": ["external"],
+                        },
+                        "external_sources": [
+                            {
+                                "title": "NASA Mars Exploration Program: 2025 Update",
+                                "url": "https://mars.nasa.gov/news/2025-update",
+                                "description": (
+                                    "NASA scientists released a 2025 report "
+                                    "summarising findings on subsurface water "
+                                    "signatures observed by the Perseverance "
+                                    "rover..."
+                                ),
+                                "score": 0.87,
+                                "published_date": "2025-08-14",
+                            }
+                        ],
+                    }
+                }
+            },
+        },
+        500: {"description": "Verification pipeline failed."},
+    },
+)
 def verify_news(payload: VerifyNewsRequest) -> VerifyNewsResponse:
     try:
         final_state = verify_claim(payload.claim)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-    evaluation = final_state.get("evaluation") or {}
-    result = final_state.get("result") or {}
+    evaluation_data = final_state.get("evaluation") or {}
+    result_data = final_state.get("result") or {}
+    raw_external_sources = final_state.get("external_sources") or []
+
+    external_sources = [
+        ExternalSource(**src)
+        for src in raw_external_sources
+        if isinstance(src, dict)
+    ]
+
     return VerifyNewsResponse(
         claim=payload.claim,
-        evaluation=evaluation,
+        evaluation=(
+            VerifyNewsEvaluationDTO(**evaluation_data)
+            if isinstance(evaluation_data, dict)
+            else VerifyNewsEvaluationDTO()
+        ),
         result=(
-            VerifyNewsResultDTO(**result)
-            if isinstance(result, dict)
+            VerifyNewsResultDTO(**result_data)
+            if isinstance(result_data, dict)
             else VerifyNewsResultDTO()
         ),
+        external_sources=external_sources,
     )
 
 
-@router.post("/upload-file", response_model=UploadFileResponse)
+@router.post(
+    "/upload-file",
+    response_model=UploadFileResponse,
+    summary="Upload a PDF file to the internal evidence store",
+    description=(
+        "Uploads a PDF, stores the binary in Appwrite, persists metadata in "
+        "MongoDB, splits the document into chunks, and indexes the chunks "
+        "into the vector store so they become available as internal evidence "
+        "for `/verify-news`."
+    ),
+)
 async def upload_file(
     file: UploadFile = File(...),
     file_title: str = Form(...),
@@ -153,7 +244,16 @@ async def upload_file(
             os.remove(temp_path)
 
 
-@router.delete("/files/{file_id}", response_model=DeleteFileResponse)
+@router.delete(
+    "/files/{file_id}",
+    response_model=DeleteFileResponse,
+    summary="Delete a file from Appwrite + MongoDB",
+    description=(
+        "Removes the file metadata from MongoDB and the binary from Appwrite. "
+        "If Appwrite deletion fails, the MongoDB metadata is restored to keep "
+        "the two stores consistent."
+    ),
+)
 async def delete_file(
     file_id: str,
     collection: AsyncCollection = Depends(mongo_collection_dependency),
@@ -191,7 +291,15 @@ async def delete_file(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/files", response_model=FilesPageResponse)
+@router.get(
+    "/files",
+    response_model=FilesPageResponse,
+    summary="List uploaded files (paginated)",
+    description=(
+        "Returns a paginated list of files that have been uploaded to the "
+        "internal evidence store, sorted by upload time (newest first)."
+    ),
+)
 async def get_files(
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=10, ge=1, le=100),

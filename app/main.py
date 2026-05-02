@@ -33,7 +33,29 @@ async def lifespan(app: FastAPI):
     await mongo_client.close()
 
 
-app = FastAPI(title="ClearView Backend", version="2.0", lifespan=lifespan)
+app = FastAPI(
+    title="ClearView Backend",
+    version="2.0",
+    lifespan=lifespan,
+    description=(
+        "ClearView is an evidence-grounded news / claim verification service.\n\n"
+        "It evaluates a claim first against an internal vector store of "
+        "trusted documents and, when that evidence is insufficient or weak, "
+        "falls back to an external web search. Final verdicts are returned "
+        "together with the supporting evidence — including full metadata for "
+        "every external source that was used (title, URL, description, "
+        "relevance score, and publication date)."
+    ),
+    openapi_tags=[
+        {
+            "name": "clearview-api",
+            "description": (
+                "Claim verification, file uploads, and evidence-store "
+                "management endpoints."
+            ),
+        }
+    ],
+)
 app.include_router(router)
 origins = [
     "http://localhost.tiangolo.com",

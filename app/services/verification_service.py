@@ -8,6 +8,7 @@ def verify_claim(claim: str) -> dict[str, Any]:
         "claim": claim,
         "internal_docs": "",
         "external_docs": "",
+        "external_sources": [],
         "evaluation": {},
         "result": {},
     }
