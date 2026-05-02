@@ -42,7 +42,7 @@ app = FastAPI(
         "It evaluates a claim first against an internal vector store of "
         "trusted documents and, when that evidence is insufficient or weak, "
         "falls back to an external web search. Final verdicts are returned "
-        "together with the supporting evidence — including full metadata for "
+        "together with the supporting evidence including full metadata for "
         "every external source that was used (title, URL, description, "
         "relevance score, and publication date)."
     ),

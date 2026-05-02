@@ -15,6 +15,8 @@ from app.db.mongo import mongo_collection_dependency
 from app.integrations.appwrite_storage import (
     appwrite_storage_dependency,
     delete_file_from_bucket,
+    get_file_download_url,
+    get_file_view_url,
     upload_file_to_bucket,
 )
 from app.schemas.files import (
@@ -139,7 +141,10 @@ def verify_news(payload: VerifyNewsRequest) -> VerifyNewsResponse:
         "Uploads a PDF, stores the binary in Appwrite, persists metadata in "
         "MongoDB, splits the document into chunks, and indexes the chunks "
         "into the vector store so they become available as internal evidence "
-        "for `/verify-news`."
+        "for `/verify-news`.\n\n"
+        "The response includes a `view_url` (inline browser viewing) and a "
+        "`download_url` for the uploaded file. Both URLs require the Appwrite "
+        "bucket to allow read access."
     ),
 )
 async def upload_file(
@@ -221,9 +226,12 @@ async def upload_file(
 
         return UploadFileResponse(
             message="File uploaded successfully",
+            file_id=created_file_id,
             file_title=file_title,
             file_size=file_size,
             file_created_at=now,
+            view_url=get_file_view_url(created_file_id),
+            download_url=get_file_download_url(created_file_id),
         )
     except HTTPException:
         raise
@@ -297,7 +305,9 @@ async def delete_file(
     summary="List uploaded files (paginated)",
     description=(
         "Returns a paginated list of files that have been uploaded to the "
-        "internal evidence store, sorted by upload time (newest first)."
+        "internal evidence store, sorted by upload time (newest first).\n\n"
+        "Each item includes a `view_url` (inline browser viewing) and a "
+        "`download_url` pointing at the file in Appwrite storage."
     ),
 )
 async def get_files(
@@ -326,7 +336,22 @@ async def get_files(
             .limit(limit)
         )
         docs = await cursor.to_list(length=limit)
-        items = [FileMetadataDTO(**doc) for doc in docs]
+        items: list[FileMetadataDTO] = []
+        for doc in docs:
+            file_id_value = doc.get("file_id")
+            items.append(
+                FileMetadataDTO(
+                    **doc,
+                    view_url=(
+                        get_file_view_url(file_id_value) if file_id_value else None
+                    ),
+                    download_url=(
+                        get_file_download_url(file_id_value)
+                        if file_id_value
+                        else None
+                    ),
+                )
+            )
         return FilesPageResponse(items=items, page=page, limit=limit, total=total)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
